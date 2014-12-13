@@ -1,0 +1,12 @@
+= Design =
+
+== basic problem ==
+=== Language ===
+Python 3
+
+Python is my most familar language, and I try to move on to Python 3.
+
+=== Codec ===
+H.264
+
+I have most matrial about H.264.

@@ -1,4 +1,5 @@
 import sys
+import math
 
 
 def nalu(data):
@@ -130,17 +131,35 @@ def deUnsignedExpl(bs, offset=0):
     newoffset = leading * 2 + 1 + offset
     return code, newoffset
 
-ue = deUnsignedExpl
+
+def deSignedExpl(bs, offset=0):
+    r"""
+    >>> deSignedExpl(b'\x38')
+    (-3, 5)
+    """
+    code, offset = deUnsignedExpl(bs, offset)
+    ret = math.ceil(code / 2)
+    if code % 2 == 0:
+        ret *= -1
+    return ret, offset
+
 
 class BitStreamM():
+
     def __init__(self, bs, csr=0):
         self.bs = bs
         self.csr = csr
+
     def readBit(self, size):
         v, self.csr = readBitsIncOff(self.bs, self.csr, size)
         return v
+
     def ue(self):
-        v, self.csr = ue(self.bs, self.csr)
+        v, self.csr = deUnsignedExpl(self.bs, self.csr)
+        return v
+
+    def se(self):
+        v, self.csr = deSignedExpl(self.bs, self.csr)
         return v
 
 if __name__ == "__main__":

@@ -13,3 +13,6 @@ if __name__ == "__main__":
         if semantic.isSPS(nal):
             SPS = grammer.SPS(nal.rbsp)
             SPS.dump()
+        elif semantic.isPPS(nal):
+            PPS = grammer.PPS(nal.rbsp)
+            PPS.dump()

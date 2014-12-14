@@ -7,5 +7,9 @@ def nal_uint_type(t):
            }
     return tbl[t]
 
+
 def isSPS(t):
-    return t.nal_uint_type == 5
+    return t.nal_uint_type == 7
+
+def isPPS(t):
+    return t.nal_uint_type == 8

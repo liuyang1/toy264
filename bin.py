@@ -144,7 +144,15 @@ def deSignedExpl(bs, offset=0):
     return ret, offset
 
 
+def deAdaptiveExpl(bs, offset=0):
+    r"""
+
+    """
+    pass
+
+
 class BitStreamM():
+    base = 8
 
     def __init__(self, bs, csr=0):
         self.bs = bs
@@ -154,6 +162,11 @@ class BitStreamM():
         v, self.csr = readBitsIncOff(self.bs, self.csr, size)
         return v
 
+    def align(self, byte=1):
+        offset = byte * base
+        while self.csr % offset != 0:
+            self.csr += 1
+
     def ue(self):
         v, self.csr = deUnsignedExpl(self.bs, self.csr)
         return v
@@ -162,6 +175,18 @@ class BitStreamM():
         v, self.csr = deSignedExpl(self.bs, self.csr)
         return v
 
+    def ae(self):
+        v, self.crs = deAdaptiveExpl(self.bs, self.csr)
+        return v
+
+    def isMoreData(self):
+        return self.crs < len(self.bs) * base
+
+    def dump(self):
+        print(self.bs)
+        print(self.csr)
+        print(self.csr / 8)
+        print(self.csr % 8)
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

@@ -146,7 +146,9 @@ class SPS(GrammerUnit):
 
     _ins = GrammerUnit._ins
     _geparselst = GrammerUnit._geparselst
-    dump = GrammerUnit.dump
+    def dump(self):
+        print("SPS")
+        super().dump()
 
 
 class PPS(GrammerUnit):
@@ -177,14 +179,16 @@ class PPS(GrammerUnit):
                  ge('redundant_pic_cnt_present_flag', 'u'),
                  ]
         self._geparselst(self.bsm, gelst)
-        if self.seq_parameter_set_id < len(SPSl):
+        if SPSl != None and self.seq_parameter_set_id < len(SPSl):
             self.SPS = SPSl[self.seq_parameter_set_id]
         else:
             raise Exception('not find SPS ' + str(self.seq_parameter_set_id))
 
     _ins = GrammerUnit._ins
     _geparselst = GrammerUnit._geparselst
-    dump = GrammerUnit.dump
+    def dump(self):
+        print("PPS")
+        super().dump()
 
 
 class SliceHead(GrammerUnit):
@@ -212,7 +216,7 @@ class SliceHead(GrammerUnit):
                  ge('idr_pic_id', 'ue',
                     cond=lambda: self.nal.nal_unit_type == 5),
                  ge('pic_order_cnt_lsb', 'u',
-                    self.SPS.log2_max_pic_order_cnt_lsb,
+                    # self.SPS.log2_max_pic_order_cnt_lsb,
                     cond=lambda: self.SPS.pic_order_cnt_type == 0),
                  ge('delta_pic_order_cnt_bottom', 'se',
                     cond=lambda: self.SPS.pic_order_cnt_type == 0
@@ -373,6 +377,7 @@ class SliceHead(GrammerUnit):
             i += 1
         return i
     def dump(self):
+        print("Slice")
         super().dump()
         k, v = "SliceType", semantic.SliceType(self.slice_type)
         dumpkv(k, v)

@@ -13,13 +13,16 @@ def chkProfile(fn):
         nal = grammer.nalunit(nal)
         if semantic.isSPS(nal):
             SPS = grammer.SPS(nal.rbsp)
-            print (SPS.profile_idc, SPS.constraint_set_flag, SPS.level_idc)
-            # SPS.dump()
-            return
+            SPS.dump()
+            # print (SPS.profile_idc, SPS.constraint_set_flag, SPS.level_idc)
+            # return
+        elif semantic.isPPS(nal):
+            PPS = grammer.PPS(nal.rbsp, [SPS])
+            PPS.dump()
+        else:
+            Slice = grammer.SliceHead(nal, [PPS])
+            Slice.dump()
 
 
 if __name__ == "__main__":
-    try:
-        chkProfile(sys.argv[1])
-    except:
-        print("error")
+    chkProfile(sys.argv[1])

@@ -163,7 +163,7 @@ class BitStreamM():
         return v
 
     def align(self, byte=1):
-        offset = byte * base
+        offset = byte * BitStreamM.base
         while self.csr % offset != 0:
             self.csr += 1
 
@@ -180,7 +180,19 @@ class BitStreamM():
         return v
 
     def isMoreData(self):
-        return self.crs < len(self.bs) * base
+        return self.csr < len(self.bs) * BitStreamM.base
+
+    def calldesp(self, s, *params):
+        despmap = {'u': BitStreamM.readBit,
+                   'ue': BitStreamM.ue, 'se': BitStreamM.se,
+                   'ae': None, 'ce': None, 'me': None, 'te': None}
+        fn = despmap[s]
+        if fn is None:
+            raise Exception("%s @ BitStreamM not impl" % (s))
+        if s == 'u':
+            return fn(self, params[0])
+        else:
+            return fn(self)
 
     def dump(self):
         print(self.bs)

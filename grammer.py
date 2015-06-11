@@ -1,9 +1,14 @@
+import sys
 from collections import namedtuple
 
 import bin
 import semantic
 
+descriptorDel = "|"
 
+
+def dumpkv(k, v, padding=35):
+    print("    %s %s" % (k.ljust(padding, '-'), v))
 class GrammerUnit():
 
     def __init__(self, bs):
@@ -20,8 +25,9 @@ class GrammerUnit():
         notdisp = ['nal', 'SPS', 'PPS', 'bsm']
         kl = [k for k in kl if k not in notdisp]
         kl = sorted(kl)
+        padding = max([len(i) for i in kl])
         for k in kl:
-            print("\t" + k.ljust(40), self.__dict__[k])
+            dumpkv(k, self.__dict__[k], padding)
 
     def _chkcond(self, cond):
         if callable(cond):
@@ -31,43 +37,26 @@ class GrammerUnit():
             cond = False if cond == 0 else True
         return cond
 
+    def selDesp(self, desp):
+        if descriptorDel in desp:
+            desplst = desp.split('|')
+            return desplst[self.descriptorIdx]
+        return desp
+
     def _geparse(self, bsm, ge):
         if self._chkcond(ge.cond) is False:
             return
-        if ge.repeat == 1:
-            if ge.descriptor == 'u':
-                v = bsm.readBit(ge.desp)
-            elif ge.descriptor == 'ue':
-                v = bsm.ue()
-            elif ge.descriptor == 'se':
-                v = bsm.se()
-            elif ge.descriptor == 'ae':
-                v = bsm.ae()
-            elif ge.descriptor == 'ce':
-                v = bsm.ce()
-            elif ge.descriptor == 'me':
-                v = bsm.me()
-            elif ge.descriptor == 'se':
-                v = bsm.se()
-            elif ge.descriptor == 'te':
-                v = bsm.te()
-            else:
-                raise Exception('descriptor not impl')
-        else:
+        if ge.repeat != 1:
             raise Exception('ge repeat not impl')
+        desp = self.selDesp(ge.descriptor)
+        v = bsm.calldesp(desp, ge.desp)
         if ge.post:
             v = ge.post(v)
         self._ins(ge.name, v)
 
     def _geparselst(self, bsm, gelst):
         for ge in gelst:
-            try:
-                self._geparse(bsm, ge)
-            except:
-                print("parse exception")
-                bsm.dump()
-                ge.dump()
-
+            self._geparse(bsm, ge)
 NalUnit = namedtuple('NalUnit', ['forbidden_zerob_bit',
                                  'nal_ref_idc',
                                  'nal_unit_type',
@@ -94,6 +83,7 @@ class GrammerElement():
         self.post = post
         self.repeat = repeat
         self.cond = cond
+
     def dump(self):
         print(self.name)
         print(self.descriptor)
@@ -122,7 +112,7 @@ class SPS(GrammerUnit):
         self._geparselst(self.bsm, gelst)
         if self.pic_order_cnt_type == 0:
             self.prs(ge('log2_max_pic_order_cnt_lsb', 'ue',
-                    post=lambda x:x + 4))
+                        post=lambda x: x + 4))
         elif self.pic_order_cnt_type == 1:
             self.prs(ge('delta_pic_order_always_zero_flag', 'u'))
             self.prs(ge('offset_for_non_ref_pic', 'se'))
@@ -149,7 +139,7 @@ class SPS(GrammerUnit):
                  ge('frame_crop_top_offset', 'ue',
                      cond=lambda: self.frame_cropping_flag),
                  ge('frame_crop_bottom_offset', 'ue',
-                     cond=lambda :self.frame_cropping_flag),
+                     cond=lambda:self.frame_cropping_flag),
                  ge('vui_prameter_present_flag', 'u')
                  ]
         self._geparselst(self.bsm, gelst)
@@ -203,8 +193,7 @@ class SliceHead(GrammerUnit):
         self.nal = nal
         self.bsm = bin.BitStreamM(nal.rbsp)
         self.prsHead(PPSl)
-        # self.updateMbSize()
-        # self.prsData()
+        self.prsData()
 
     def prsHead(self, PPSl):
         gelst = [ge('first_mb_in_slice', 'ue'),
@@ -212,11 +201,9 @@ class SliceHead(GrammerUnit):
                  ge('pic_parameter_set_id', 'ue'),
                  ]
         self._geparselst(self.bsm, gelst)
-        if self.pic_parameter_set_id < len(PPSl):
-            self.PPS = PPSl[self.pic_parameter_set_id]
-            self.SPS = self.PPS.SPS
-        else:
-            raise Exception('not find PPS ' + str(self.pic_parameter_set_id))
+        self.PPS = PPSl[self.pic_parameter_set_id]
+        self.SPS = self.PPS.SPS
+        self.descriptorIdx = self.PPS.entropy_coding_mode_flag
         gelst = [ge('frame_num', 'u', self.SPS.log2_max_frame_num),
                  ge('field_pic_flag', 'u',
                     cond=lambda: not self.SPS.frame_mbs_only_flag),
@@ -326,14 +313,18 @@ class SliceHead(GrammerUnit):
                     ge('max_long_term_frame_idx', 'ue', post=lambda x: x - 1))
 
     def updateMbSize(self):
-        self.MbaffFrameFlag = (
-            self.SPS.mb_adpative_frame_field_flag and not self.field_pic_flag)
+        if 'mb_adpative_frame_field_flag' not in self.SPS.__dict__:
+            self.MbaffFrameFlag = False
+        else:
+            self.MbaffFrameFlag = (
+                self.SPS.mb_adpative_frame_field_flag and not self.field_pic_flag)
         # TODO
         # self.PicHeightInMbs = FrameHeightInMbs / (1 + self.field_pic_flag)
         self.PicSizeInMbs = self.SPS.pic_width_in_mbs * \
             self.SPS.pic_height_in_map_units
 
     def prsData(self):
+        self.updateMbSize()
         if self.PPS.entropy_coding_mode_flag:
             self.bsm.align()
         currMbAddr = self.first_mb_in_slice * (1 + self.MbaffFrameFlag)
@@ -343,7 +334,7 @@ class SliceHead(GrammerUnit):
                 if not self.PPS.entropy_coding_mode_flag:
                     self.prs(ge('mb_skip_run', 'ue'))
                     prevMbSkipped = self.mb_skip_run > 0
-                    for i in xrange(self.mb_skip_run):
+                    for i in range(self.mb_skip_run):
                         currMbAddr = self.NextMbAddress(currMbAddr)
                     moreDataFlag = self.bsm.isMoreData()
                 else:
@@ -352,8 +343,8 @@ class SliceHead(GrammerUnit):
             if moreDataFlag:
                 if self.MbaffFrameFlag and (currMbAddr % 2 == 0 or (currMbAddr % 2 == 1 and prevMbSkipped)):
                     self.prs(ge('mb_field_decoding_flag', 'u|ae'))
-            break
             self.macroblock_layer()
+            break
             if not self.PPS.entropy_coding_mode_flag:
                 moreDataFlag = self.bsm.isMoreData()
             else:
@@ -364,19 +355,26 @@ class SliceHead(GrammerUnit):
                 else:
                     self.prs(ge('end_of_slice_flag', 'ae'))
                     moreDataFlag = not self.end_of_slice_flag
-            currMbAddr = NextMbAddress(currMbAddr)
+            currMbAddr = self.NextMbAddress(currMbAddr)
         # end of slice data
 
+    def macroblock_layer(self):
+        self.prs(ge('mb_type', 'ue|ae'))
     _ins = GrammerUnit._ins
     _geparselst = GrammerUnit._geparselst
     dump = GrammerUnit.dump
 
-
-def NextMbAddress(n):
-    i = n + 1
-# TODO
-    while i < self.PicSizeInMbs and False:
-        # and MbToSliceGroupMap[i] != MbToSliceGroupMap[n]:
-        # always False when num_slice_groups == 1
-        i += 1
-    return i
+    def NextMbAddress(self, n):
+        i = n + 1
+        # TODO
+        while i < self.PicSizeInMbs and False:
+            # and MbToSliceGroupMap[i] != MbToSliceGroupMap[n]:
+            # always False when num_slice_groups == 1
+            i += 1
+        return i
+    def dump(self):
+        super().dump()
+        k, v = "SliceType", semantic.SliceType(self.slice_type)
+        dumpkv(k, v)
+        k, v = 'mb_type', semantic.MbTypeName(self.slice_type, self.mb_type)
+        dumpkv(k, v)

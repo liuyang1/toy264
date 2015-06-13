@@ -13,6 +13,26 @@ def isSPS(t):
     return t.nal_unit_type == 7
 
 
+def showProfile(pps):
+    p = pps.profile_idc
+    flag = pps.constraint_set_flag
+    # TODO: more detail
+    if p == 144:
+        return "High444"
+    elif p == 122:
+        return "High422"
+    elif p == 110:
+        return "High10"
+    elif p == 100 or (p == 77 and flag == 1):
+        return "High"
+    elif p == 88:
+        return "Extern"
+    elif p == 77:
+        return "Main"
+    elif p == 66:
+        return "Baseline"
+
+
 def isPPS(t):
     return t.nal_unit_type == 8
 

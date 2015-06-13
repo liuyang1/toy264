@@ -149,6 +149,9 @@ class SPS(GrammerUnit):
     def dump(self):
         print("SPS")
         super().dump()
+        k, v = "Profile", semantic.showProfile(self)
+        dumpkv(k, v)
+
 
 
 class PPS(GrammerUnit):

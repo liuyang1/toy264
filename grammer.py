@@ -351,6 +351,7 @@ class SliceHead(GrammerUnit):
                 if self.MbaffFrameFlag and (currMbAddr % 2 == 0 or (currMbAddr % 2 == 1 and prevMbSkipped)):
                     self.prs(ge('mb_field_decoding_flag', 'u|ae'))
             self.macroblock_layer()
+            # TODO, more marcoblock
             break
             if not self.PPS.entropy_coding_mode_flag:
                 moreDataFlag = self.bsm.isMoreData()
@@ -367,10 +368,62 @@ class SliceHead(GrammerUnit):
 
     def macroblock_layer(self):
         self.prs(ge('mb_type', 'ue|ae'))
+        MBType = semantic.MbTypeName(self.slice_type, self.mb_type)
+        if MBType == "I_PCM":
+            #TODO
+            pass
+        else:
+            mbtype0 = semantic.MbPartPredMode(self.slice_type, self.mb_type, 0)
+            print("mbtype0 " + mbtype0)
+            if (mbtype0 != "Intra_4x4" and
+                    mbtype0 != "Intra_16x16" and
+                    semantic.NumMbPart(self.mb_type) == 4):
+                self.sub_mb_pred()
+            else:
+                self.mb_pred()
+            if mbtype0 != "Intra_16x16":
+                self.prs(ge("coded_block_pattern", "me|ae"))
+            luma, chroma = semantic.CodedBlockPattern(self.mb_type)
+            if (luma > 0 or chroma > 0 or mbtype0 == "Intra_16x16"):
+                self.prs(ge("mb_qp_delta", "se|ae"))
+                print("HERE")
+                self.residual()
+
+
     _ins = GrammerUnit._ins
     _geparselst = GrammerUnit._geparselst
     dump = GrammerUnit.dump
 
+    def residual(self):
+        if not self.PPS.entropy_coding_mode_flag:
+            residualFn = self.residual_block_cavlc
+        else:
+            residualFn = self.residual_block_cabac
+        mbtype0 = semantic.MbPartPredMode(self.slice_type, self.mb_type, 0)
+        if mbtype0 == "Intra_16x16":
+            print("HERE")
+            residualFn("Intra16x16DCLevel", 16)
+        luma, chroma = semantic.CodedBlockPattern(self.mb_type)
+        for i8x8 in range(4):
+            for i4x4 in range(4):
+                pass
+
+    def residual_block_cavlc(self, coeffLevel, maxNumCoeff):
+        coeffLevel = [0 for i in range(maxNumCoeff)]
+        self.prs(ge('coeff_token', 'ce'))
+        pass
+
+    def mb_pred(self):
+        mbtype0 = semantic.MbPartPredMode(self.slice_type, self.mb_type, 0)
+        if mbtype0 == "Intra_4x4" or mbtype0 == "Intra_16x16":
+            if mbtype0 == "Intra_4x4":
+                print("TODO")
+            if mbtype0 == "Intra_8x8":
+                print("TODO")
+            self.prs(ge('intra_chroma_pred_mode', "ue|ae"))
+            print(self.intra_chroma_pred_mode)
+        elif mbtype0 == "Direct":
+            print("mbtype0 Direct TODO")
     def NextMbAddress(self, n):
         i = n + 1
         # TODO
@@ -384,5 +437,5 @@ class SliceHead(GrammerUnit):
         super().dump()
         k, v = "SliceType", semantic.SliceType(self.slice_type)
         dumpkv(k, v)
-        k, v = 'mb_type', semantic.MbTypeName(self.slice_type, self.mb_type)
+        k, v = 'MBType', semantic.MbTypeName(self.slice_type, self.mb_type)
         dumpkv(k, v)

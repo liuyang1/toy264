@@ -116,3 +116,46 @@ def MbTypeName(slice_type, v):
         print("out of range slice_type %s mb_type %d" % (slice_type, v))
         return m[-1]
     return m[v]
+
+
+PMbTypePredMap = [["Pred_L0", "NONE"],
+        ["Pred_L0", "Pred_L0"],
+        ["Pred_L0", "Pred_L0"],
+        ["NONE", "NONE"],
+        ["NONE", "NONE"],
+        ["Pred_L0", "NONE"]]
+def MbPartPredMode(slice_type, mb_type, n):
+    sSlicet = SliceType(slice_type)
+    if sSlicet == 'I':
+        if mb_type == 0:
+            return "Intra_4x4"
+        elif mb_type == 25:
+            return "NONE"
+        else:
+            return "Intra_16x16"
+    elif sSlicet == "P":
+        return PMbTypePredMap[mb_type][n]
+    elif sSlicet == "B":
+        # TODO
+        return BMbTypePredMap[mb_type][n]
+
+
+def NumMbPart(mb_type):
+    pass
+
+def CodedBlockPattern(mb_type):
+    """
+    >>> CodedBlockPattern(0)
+    (None, None)
+    >>> CodedBlockPattern(12)
+    (2, 0)
+    >>> CodedBlockPattern(13)
+    (0, 15)
+    """
+    if mb_type > 25:
+        raise Exception('unknown mb_type %d' % (mb_type))
+    if mb_type == 0 or mb_type == 25:
+        return None, None
+    chroma = (mb_type - 1) // 4 % 3
+    luma = 0 if mb_type <= 12 else 15
+    return chroma, luma

@@ -22,3 +22,11 @@ if __name__ == "__main__":
         elif semantic.isSlice(nal):
             SliceHead = grammer.SliceHead(nal, PPSl)
             SliceHead.dump()
+        elif semantic.isAU(nal):
+            au = grammer.AU(nal.rbsp)
+            au.dump()
+        elif semantic.isSEI(nal):
+            sei = grammer.SEI(nal.rbsp)
+            sei.dump()
+        else:
+            bin.dump(nal.rbsp)

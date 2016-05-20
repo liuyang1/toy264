@@ -1,10 +1,25 @@
 def nal_unit_type(t):
     tbl = {0: 'reserved',
-           1: 'slice',
+           1: 'non-IDR slice',
+           2: 'partition A slice',
+           3: 'partition B slice',
+           4: 'partition C slice',
            5: 'IDR slice',
+           6: 'SEI Supplemental enhancement information',
            7: 'SPS Sequence Parameter Set',
            8: 'PPS Picture Parameter Set',
-           9: 'delimter',
+           9: 'access unit delimter',
+           10: 'end of sequence',
+           11: 'end of stream',
+           12: 'filler data',
+           13: 'SPS extension',
+           14: 'prefix nal unit',
+           15: 'subset SPS',
+           16: 'depth param set',
+           17: 'reserved',
+           18: 'reserved',
+           14: 'svc extension',
+           20: 'avc 3d extension',
            }
     return tbl[t]
 
@@ -13,24 +28,46 @@ def isSPS(t):
     return t.nal_unit_type == 7
 
 
+def isSEI(t):
+    return t.nal_unit_type == 6
+
+
 def showProfile(pps):
     p = pps.profile_idc
     flag = pps.constraint_set_flag
     # TODO: more detail
-    if p == 144:
+    if p == 244 and flag & 0x10:
+        return "High444 Intra"
+    elif p == 244:
+        return "High444 Predictive"
+    elif p == 144:
         return "High444"
+    elif p == 122 and flag & 0x10:
+        return "High422 Intra"
     elif p == 122:
         return "High422"
+    elif p == 110 and flag & 0x10:
+        return "High10 Intra"
     elif p == 110:
         return "High10"
+    elif p == 100 and flag & 0x08 and flag & 0x04:
+        return "Constrainted High"
+    elif p == 100 and flag & 0x08:
+        return "Progressive High"
     elif p == 100 or (p == 77 and flag == 1):
         return "High"
     elif p == 88:
-        return "Extern"
+        return "Extended"
     elif p == 77:
         return "Main"
+    elif p == 66 and flag & 0x40:
+        return "Constrainted Baseline"
     elif p == 66:
         return "Baseline"
+    elif p == 44:
+        return "CAVLC444 Intra"
+    else:
+        return "Unknown"
 
 
 def isPPS(t):
@@ -39,6 +76,10 @@ def isPPS(t):
 
 def isSlice(t):
     return t.nal_unit_type in [1, 5]
+
+
+def isAU(t):
+    return t.nal_unit_type == 9
 
 
 def SliceType(v):
@@ -78,6 +119,7 @@ def buildISliceMbTypeName():
     lst.append('I_PCM')
     return lst
 
+
 def buildBSliceMbTypeName():
     """
     >>> l = buildBSliceMbTypeName()
@@ -88,11 +130,12 @@ def buildBSliceMbTypeName():
     """
     lst = ['Direct', 'L0', 'L1', 'Bi']
     lst = [i + '_16x16' for i in lst]
+
     def addPair(prefix):
-        l =  ['16x8', '8x16']
+        l = ['16x8', '8x16']
         return [prefix + "_" + i for i in l]
     l = ['L0_L0', 'L1_L1', 'L0_L1', 'L1_L0',
-            'L0_Bi', 'L1_Bi', 'Bi_L0', 'Bi_L1', 'Bi_Bi']
+         'L0_Bi', 'L1_Bi', 'Bi_L0', 'Bi_L1', 'Bi_Bi']
     for i in l:
         lst.extend(addPair(i))
     lst.extend(['B_8x8', 'B_Skip'])
@@ -102,12 +145,13 @@ def buildBSliceMbTypeName():
 ISliceMbTypeNameMap = buildISliceMbTypeName()
 SISliceMbTypeNameMap = ['SI'] + ISliceMbTypeNameMap
 PSliceMbTypeNameMap = ['P_L0_16x16', 'P_L0_L0_16x8', 'P_L0_L0_8x16',
-        'P_8x8', 'P_8x8ref0'] + ISliceMbTypeNameMap
+                       'P_8x8', 'P_8x8ref0'] + ISliceMbTypeNameMap
 BSliceMbTypeNameMap = buildBSliceMbTypeName() + ISliceMbTypeNameMap
 SliceTypeMapMbType = {'I': ISliceMbTypeNameMap,
-        'P': PSliceMbTypeNameMap,
-        'SP': PSliceMbTypeNameMap,
-        'B': BSliceMbTypeNameMap}
+                      'P': PSliceMbTypeNameMap,
+                      'SP': PSliceMbTypeNameMap,
+                      'B': BSliceMbTypeNameMap}
+
 
 def MbTypeName(slice_type, v):
     m = SliceTypeMapMbType[SliceType(slice_type)]
@@ -119,11 +163,13 @@ def MbTypeName(slice_type, v):
 
 
 PMbTypePredMap = [["Pred_L0", "NONE"],
-        ["Pred_L0", "Pred_L0"],
-        ["Pred_L0", "Pred_L0"],
-        ["NONE", "NONE"],
-        ["NONE", "NONE"],
-        ["Pred_L0", "NONE"]]
+                  ["Pred_L0", "Pred_L0"],
+                  ["Pred_L0", "Pred_L0"],
+                  ["NONE", "NONE"],
+                  ["NONE", "NONE"],
+                  ["Pred_L0", "NONE"]]
+
+
 def MbPartPredMode(slice_type, mb_type, n):
     sSlicet = SliceType(slice_type)
     if sSlicet == 'I':
@@ -142,6 +188,7 @@ def MbPartPredMode(slice_type, mb_type, n):
 
 def NumMbPart(mb_type):
     pass
+
 
 def CodedBlockPattern(mb_type):
     """

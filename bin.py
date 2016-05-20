@@ -2,6 +2,21 @@ import sys
 import math
 
 
+def dump(data):
+    idx = 0
+    for i in data:
+        if idx % 16 == 0:
+            print("%08x" % (idx), end="  ")
+        print("%02x" % (i), end=" ")
+        idx = idx + 1
+        if idx % 4 == 0:
+            print(" ", end="")
+        if idx % 16 == 0:
+            print("")
+    if (idx + 1) % 16 != 0:
+        print("")
+
+
 def nalu(data):
     r"""
     >>> nalu(b'\x00\x00\x00\x01\xAA')
@@ -14,6 +29,10 @@ def nalu(data):
     [b'\xaa', b'\x00\x00\x00\x00']
     """
     r = data.split(b'\x00\x00\x00\x01')
+    # also support 000001 start code
+    r = [i.split(b'\x00\x00\x01') for i in r]
+    import itertools
+    r = itertools.chain(*r)
     m = [(b'\x00\x00\x00\x00', b'\x00\x00\x00\x03\x00'),
          (b'\x00\x00\x00\x01', b'\x00\x00\x00\x00\x01'),
          (b'\x00\x00\x00\x02', b'\x00\x00\x00\x00\x02'),
@@ -167,6 +186,10 @@ class BitStreamM():
         while self.csr % offset != 0:
             self.csr += 1
 
+    def b(self):
+        v, self.csr = readBitsIncOff(self.bs, self.csr, 8)
+        return v
+
     def ue(self):
         v, self.csr = deUnsignedExpl(self.bs, self.csr)
         return v
@@ -185,6 +208,7 @@ class BitStreamM():
     def calldesp(self, s, *params):
         despmap = {'u': BitStreamM.readBit,
                    'ue': BitStreamM.ue, 'se': BitStreamM.se,
+                   'b': BitStreamM.b,
                    'ae': None, 'ce': None, 'me': None, 'te': None}
         fn = despmap[s]
         if fn is None:
@@ -199,6 +223,8 @@ class BitStreamM():
         print(self.csr)
         print(self.csr / 8)
         print(self.csr % 8)
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

@@ -9,6 +9,8 @@ descriptorDel = "|"
 
 def dumpkv(k, v, padding=35):
     print("    %s %s" % (k.ljust(padding, '-'), v))
+
+
 class GrammerUnit():
 
     def __init__(self, bs):
@@ -22,7 +24,7 @@ class GrammerUnit():
 
     def dump(self):
         kl = self.__dict__.keys()
-        notdisp = ['nal', 'SPS', 'PPS', 'bsm']
+        notdisp = ['nal', 'SPS', 'PPS', 'bsm', 'VUI']
         kl = [k for k in kl if k not in notdisp]
         kl = sorted(kl)
         padding = max([len(i) for i in kl])
@@ -57,6 +59,8 @@ class GrammerUnit():
     def _geparselst(self, bsm, gelst):
         for ge in gelst:
             self._geparse(bsm, ge)
+
+
 NalUnit = namedtuple('NalUnit', ['forbidden_zerob_bit',
                                  'nal_ref_idc',
                                  'nal_unit_type',
@@ -94,6 +98,135 @@ def inc(x):
     return x + 1
 
 
+class AU(GrammerUnit):
+
+    def __init__(self, bs):
+        self.bsm = bin.BitStreamM(bs)
+        gelst = [ge('primary_pic_type', 'u', 3)]
+        self._geparselst(self.bsm, gelst)
+
+    def dump(self):
+        print("AU")
+        super().dump()
+
+
+class VUI(GrammerUnit):
+
+    Extended_SAR = 255
+
+    def prs(self, ge):
+        GrammerUnit._geparse(self, self.bsm, ge)
+
+    def __init__(self, bsm):
+        self.bsm = bsm
+        self.prs(ge('aspect_ratio_info_present_flag', 'u', 1))
+        if self.aspect_ratio_info_present_flag:
+            self.prs(ge('aspect_ratio_idc', 'u', 8))
+            if self.aspect_ratio_idc == VUI.Extended_SAR:
+                self.prs(ge('sar_width', 'u', 16))
+                self.prs(ge('sar_height', 'u', 16))
+        self.prs(ge('overscan_info_present_flag', 'u', 1))
+        if self.overscan_info_present_flag:
+            self.prs(ge('overscan_appropriate', 'u', 1))
+        self.prs(ge('video_signal_type_present_flag', 'u', 1))
+        if self.video_signal_type_present_flag:
+            self.prs(ge('video_format', 'u', 3))
+            self.prs(ge('video_full_range_flag', 'u', 1))
+            self.prs(ge('colour_description_present_flag', 'u', 1))
+            if self.colour_description_present_flag:
+                self.prs(ge('colour_primaries', 'u', 8))
+                self.prs(ge('transfer_characteristics', 'u', 8))
+                self.prs(ge('matrix_coefficients', 'u', 8))
+        self.prs(ge('chroma_loc_info_present_flag', 'u', 1))
+        if self.chroma_loc_info_present_flag:
+            self.prs(ge('chroma_sample_loc_type_top_field', 'ue'))
+            self.prs(ge('chroma_sample_loc_type_bottom_field', 'ue'))
+        self.prs(ge('timing_info_present_flag', 'u', 1))
+        if self.timing_info_present_flag:
+            self.prs(ge('num_units_in_tick', 'u', 32))
+            self.prs(ge('time_scale', 'u', 32))
+            self.prs(ge('fixed_frame_rate_flag', 'u', 1))
+        self.prs(ge('nal_hrd_parameters_present_flag', 'u', 1))
+        if self.nal_hrd_parameters_present_flag:
+            print("TODO: hrd_param")
+        self.prs(ge('vcl_hrd_parameters_present_flag', 'u', 1))
+        if self.vcl_hrd_parameters_present_flag:
+            print("TODO: vcl_hdr_param")
+        if self.nal_hrd_parameters_present_flag or self.vcl_hrd_parameters_present_flag:
+            self.prs(ge('low_dely_hrd_flag', 'u', 1))
+        self.prs(ge('pic_struct_present_flag', 'u', 1))
+        self.prs(ge('bitstream_restriction_flag', 'u', 1))
+        if self.bitstream_restriction_flag:
+            gelst = [ge('motion_vector_over_pic_boudaries_flag', 'u', 1),
+                     ge('max_bytes_per_pic_denom', 'ue'),
+                     ge('max_bits_per_mb_denom', 'ue'),
+                     ge('max_mv_length_horizontal',
+                        'ue', post=lambda x: 2 ** x),
+                     ge('max_mv_length_vertical', 'ue', post=lambda x: 2 ** x),
+                     ge('max_num_reorder_frames', 'ue'),
+                     ge('max_dec_frame_buffering', 'ue'),
+                     ]
+            self._geparselst(self.bsm, gelst)
+
+    def dump(self):
+        print("VUI")
+        super().dump()
+
+
+class UserDataUnregistered(GrammerUnit):
+
+    def prs(self, ge):
+        GrammerUnit._geparse(self, self.bsm, ge)
+
+    def __init__(self, bs, payloadSize):
+        self.bsm = bin.BitStreamM(bs)
+        self.prs(ge('itu_country_code', 'b'))
+        if self.itu_country_code != 0xff:
+            i = 1
+        else:
+            self.prs(ge('itu_country_code_ext', 'b'))
+            i = 2
+        # self.itu_payalod = bs[i: payloadSize]
+        self.prs(ge('uuid', 'u', 128))
+        print("length: %d payloadSize: %d" % (len(bs), payloadSize))
+        self.user_data = bs[16:]
+
+    def dump(self):
+        print("UserData")
+        super().dump()
+
+
+class SEI(GrammerUnit):
+    UserDataUnregisteredType = 5
+
+    def __init__(self, bs):
+        self.payload_type = 0
+        i = 0
+        while bs[i] == 0xff:
+            self.payload_type += 0xff
+            i += 1
+        self.payload_type += bs[i]
+        i += 1
+        self.payload_size = 0
+        while bs[i] == 0xff:
+            self.payload_size += 0xff
+            i += 1
+        self.payload_size += bs[i]
+        i += 1
+        self.raw = bs[i:]
+        self.data = None
+        if self.payload_type == SEI.UserDataUnregisteredType:
+            self.data = UserDataUnregistered(self.raw, self.payload_size)
+
+    def dump(self):
+        print("SEI")
+        print("type: %d size: %d" % (self.payload_type, self.payload_size))
+        if self.data:
+            self.data.dump()
+        else:
+            bin.dump(self.raw)
+
+
 class SPS(GrammerUnit):
 
     def prs(self, ge):
@@ -105,7 +238,10 @@ class SPS(GrammerUnit):
                  ge('constraint_set_flag', 'u', 8),
                  ge('level_idc', 'u', 8),
                  ge('seq_parameter_set_id', 'ue'),
-                 ge('log2_max_frame_num', 'ue',
+                 ]
+        self._geparselst(self.bsm, gelst)
+        # TODO
+        gelst = [ge('log2_max_frame_num', 'ue',
                     post=lambda x:x + 4),
                  ge('pic_order_cnt_type', 'ue')
                  ]
@@ -123,7 +259,7 @@ class SPS(GrammerUnit):
                 # TODO: need impl REPEAT feature
                 lst.append(self.bsm.se())
             self._ins('offset_for_ref_frame', lst)
-        gelst = [ge('num_ref_frames', 'ue'),
+        gelst = [ge('max_num_ref_frames', 'ue'),
                  ge('gaps_in_frame_num_value_allowed_flag', 'u'),
                  ge('pic_width_in_mbs', 'ue', post=inc),
                  ge('pic_height_in_map_units', 'ue', post=inc),
@@ -140,18 +276,22 @@ class SPS(GrammerUnit):
                      cond=lambda: self.frame_cropping_flag),
                  ge('frame_crop_bottom_offset', 'ue',
                      cond=lambda:self.frame_cropping_flag),
-                 ge('vui_prameter_present_flag', 'u')
+                 ge('vui_parameter_present_flag', 'u')
                  ]
         self._geparselst(self.bsm, gelst)
+        if self.vui_parameter_present_flag:
+            self.VUI = VUI(self.bsm)
 
     _ins = GrammerUnit._ins
     _geparselst = GrammerUnit._geparselst
+
     def dump(self):
         print("SPS")
         super().dump()
         k, v = "Profile", semantic.showProfile(self)
         dumpkv(k, v)
-
+        if self.vui_parameter_present_flag:
+            self.VUI.dump()
 
 
 class PPS(GrammerUnit):
@@ -189,6 +329,7 @@ class PPS(GrammerUnit):
 
     _ins = GrammerUnit._ins
     _geparselst = GrammerUnit._geparselst
+
     def dump(self):
         print("PPS")
         super().dump()
@@ -370,7 +511,7 @@ class SliceHead(GrammerUnit):
         self.prs(ge('mb_type', 'ue|ae'))
         MBType = semantic.MbTypeName(self.slice_type, self.mb_type)
         if MBType == "I_PCM":
-            #TODO
+            # TODO
             pass
         else:
             mbtype0 = semantic.MbPartPredMode(self.slice_type, self.mb_type, 0)
@@ -388,7 +529,6 @@ class SliceHead(GrammerUnit):
                 self.prs(ge("mb_qp_delta", "se|ae"))
                 print("HERE")
                 self.residual()
-
 
     _ins = GrammerUnit._ins
     _geparselst = GrammerUnit._geparselst
@@ -424,6 +564,7 @@ class SliceHead(GrammerUnit):
             print(self.intra_chroma_pred_mode)
         elif mbtype0 == "Direct":
             print("mbtype0 Direct TODO")
+
     def NextMbAddress(self, n):
         i = n + 1
         # TODO
@@ -432,6 +573,7 @@ class SliceHead(GrammerUnit):
             # always False when num_slice_groups == 1
             i += 1
         return i
+
     def dump(self):
         print("Slice")
         super().dump()

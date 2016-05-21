@@ -546,6 +546,13 @@ class SliceHead(GrammerUnit):
             for i4x4 in range(4):
                 pass
 
+    def sel_nC(self, target=None):
+        if target == "ChromaDCLevel":
+            print("TODO: select nC by chroma_format_idc")
+            return 0
+        if target == "Intra16x16DCLevel":
+            luma4x4BlkIdx = 0
+
     def residual_block_cavlc(self, coeffLevel, maxNumCoeff):
         coeffLevel = [0 for i in range(maxNumCoeff)]
         self.prs(ge('coeff_token', 'ce'))

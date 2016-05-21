@@ -170,6 +170,13 @@ def deAdaptiveExpl(bs, offset=0):
     pass
 
 
+def deCAVLC(bs, nC, offset=0):
+    """
+    """
+    tab = tab.sel_nCTab(nC)
+    pass
+
+
 class BitStreamM():
     base = 8
 
@@ -202,6 +209,10 @@ class BitStreamM():
         v, self.crs = deAdaptiveExpl(self.bs, self.csr)
         return v
 
+    def ce(self, nC):
+        v, self.crs = deCAVLC(self.bs, nC, self.csr)
+        return v
+
     def isMoreData(self):
         return self.csr < len(self.bs) * BitStreamM.base
 
@@ -215,6 +226,9 @@ class BitStreamM():
             raise Exception("%s @ BitStreamM not impl" % (s))
         if s == 'u':
             return fn(self, params[0])
+        elif s == 'ce':
+            nC = params[0]
+            return fn(self, nC)
         else:
             return fn(self)
 

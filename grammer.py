@@ -527,7 +527,6 @@ class SliceHead(GrammerUnit):
             luma, chroma = semantic.CodedBlockPattern(self.mb_type)
             if (luma > 0 or chroma > 0 or mbtype0 == "Intra_16x16"):
                 self.prs(ge("mb_qp_delta", "se|ae"))
-                print("HERE")
                 self.residual()
 
     _ins = GrammerUnit._ins
@@ -541,7 +540,6 @@ class SliceHead(GrammerUnit):
             residualFn = self.residual_block_cabac
         mbtype0 = semantic.MbPartPredMode(self.slice_type, self.mb_type, 0)
         if mbtype0 == "Intra_16x16":
-            print("HERE")
             residualFn("Intra16x16DCLevel", 16)
         luma, chroma = semantic.CodedBlockPattern(self.mb_type)
         for i8x8 in range(4):

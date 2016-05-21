@@ -35,7 +35,6 @@ def isSEI(t):
 def showProfile(pps):
     p = pps.profile_idc
     flag = pps.constraint_set_flag
-    # TODO: more detail
     if p == 244 and flag & 0x10:
         return "High444 Intra"
     elif p == 244:

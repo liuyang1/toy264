@@ -48,8 +48,6 @@ class GrammerUnit():
     def _geparse(self, bsm, ge):
         if self._chkcond(ge.cond) is False:
             return
-        if ge.repeat != 1:
-            raise Exception('ge repeat not impl')
         desp = self.selDesp(ge.descriptor)
         v = bsm.calldesp(desp, ge.desp)
         if ge.post:
@@ -59,6 +57,13 @@ class GrammerUnit():
     def _geparselst(self, bsm, gelst):
         for ge in gelst:
             self._geparse(bsm, ge)
+            
+    def _geparseseq(self, bsm, ges):
+        lst = []
+        while ges.until(ges.param):
+            v = self._geparse(bsm, ges.ge)
+            lst.append(self.__dict__[ges.ge.name])
+        self._ins(ges.ge.name + 's', lst)
 
 
 NalUnit = namedtuple('NalUnit', ['forbidden_zerob_bit',
@@ -78,20 +83,35 @@ def nalunit(bs):
 
 
 class GrammerElement():
-
+    """
+    name: string, 
+    descriptor: string,     binary parse function
+    desp: number,           param when calling binary parse function if need
+    cond: bool,             conditional parse this element or not
+    post: function,         when get value from DESCRIPTOR, then post processing
+                            result with this func.
+    """
     def __init__(self, name, descriptor,
-                 desp=1, cond=True, post=None, repeat=1):
+                 desp=1, cond=True, post=None):
         self.name = name
         self.descriptor = descriptor
         self.desp = desp
         self.post = post
-        self.repeat = repeat
         self.cond = cond
 
     def dump(self):
         print(self.name)
         print(self.descriptor)
+# ge is short alias for GrammerElement
 ge = GrammerElement
+
+class GrammerElementSeq():
+    def __init__(self, ge, until=None, param=None):
+        self.ge = ge
+        self.repeat = 1
+        self.until = until
+        self.param = param
+ges = GrammerElementSeq
 
 
 def inc(x):

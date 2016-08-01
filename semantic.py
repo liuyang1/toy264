@@ -18,8 +18,9 @@ def nal_unit_type(t):
            16: 'depth param set',
            17: 'reserved',
            18: 'reserved',
-           14: 'svc extension',
-           20: 'avc 3d extension',
+           19: 'slice layer without partitioning',
+           20: 'slice layer ext',
+           21: 'avc 3d extension',
            }
     return tbl[t]
 

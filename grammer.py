@@ -551,7 +551,6 @@ class SliceHead(GrammerUnit):
 
     _ins = GrammerUnit._ins
     _geparselst = GrammerUnit._geparselst
-    dump = GrammerUnit.dump
 
     def residual(self):
         if not self.PPS.entropy_coding_mode_flag:

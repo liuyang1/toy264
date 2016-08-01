@@ -3,6 +3,10 @@ import math
 
 
 def dump(data):
+    """
+    pretty dump binary data with
+    prefix lineno, every 16 bytes per line, every 4 bytes per chunk
+    """
     idx = 0
     for i in data:
         if idx % 16 == 0:
@@ -19,6 +23,7 @@ def dump(data):
 
 def nalu(data):
     r"""
+    split raw bytes to nalus, split by H.264 start code
     >>> nalu(b'\x00\x00\x00\x01\xAA')
     [b'\xaa']
     >>> nalu(b'\x00\x00\x00\x01\xAA\x00\x00\x00\x01\xBB')
@@ -33,6 +38,7 @@ def nalu(data):
     r = [i.split(b'\x00\x00\x01') for i in r]
     import itertools
     r = itertools.chain(*r)
+    # resume conflict bytes with start code back
     m = [(b'\x00\x00\x00\x00', b'\x00\x00\x00\x03\x00'),
          (b'\x00\x00\x00\x01', b'\x00\x00\x00\x00\x01'),
          (b'\x00\x00\x00\x02', b'\x00\x00\x00\x00\x02'),
@@ -45,6 +51,7 @@ def nalu(data):
 
 def extBit(b, left, right):
     r"""
+    extract bit from [left, right] bits
     >>> extBit(0x67, 7, 5)
     3
     """
@@ -55,6 +62,7 @@ def extBit(b, left, right):
 
 def onebytefield(b, widlst):
     r"""
+    split one byte based on field list
     >>> onebytefield(0x67, [1, 2, 5])
     [0, 3, 7]
     >>> onebytefield(0xff, [1, 2, 5])
@@ -174,7 +182,6 @@ def deCAVLC(bs, nC, offset=0):
     """
     """
     tab = tab.sel_nCTab(nC)
-    pass
 
 
 class BitStreamM():

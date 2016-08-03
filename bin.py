@@ -1,6 +1,8 @@
 import sys
 import math
 
+import tab
+
 
 def dump(data):
     """
@@ -140,6 +142,11 @@ def readBits(bs, offset, size=1):
 
 
 def readBitsIncOff(bs, offset, size=1):
+    r"""
+    readBits from bitstream, return data, and offset
+    >>> readBitsIncOff(b'\x80', 0, 3)
+    (4, 3)
+    """
     return readBits(bs, offset, size), offset + size
 
 
@@ -170,6 +177,26 @@ def deSignedExpl(bs, offset=0):
         ret *= -1
     return ret, offset
 
+
+def buildTrie(tbl):
+    pass
+
+
+def deVlcTbl(tbl):
+    r"""
+    >>> fn = deVlcTbl(tab.H261MbaVlcTbl)
+    >>> fn(b'\x10')
+    1
+    >>> fn(b'\x09')
+    12
+    """
+    trie = buildTrie(tbl)
+    def func(bs, offset=0):
+        return 0
+    return func
+
+
+deH261Mba = deVlcTbl(tab.H261MbaVlcTbl)
 
 def deAdaptiveExpl(bs, offset=0):
     r"""
@@ -249,3 +276,4 @@ class BitStreamM():
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+    print("test pass")

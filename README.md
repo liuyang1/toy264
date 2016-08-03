@@ -1,4 +1,4 @@
-= toy264 =
+# toy264
 
 a toy codec of H.264
 
@@ -7,7 +7,7 @@ a toy codec of H.264
 
 only support python3
 
-== syntax element support ==
+## syntax element support
 
 - [X] u: unsigned int with n bits
 - [X] ue: unsgined Exp-Golomb-coded
@@ -18,9 +18,16 @@ only support python3
 - [ ] me
 - [ ] te
 
+## H.261
 
-== parser list ==
+- [X] picture
+- [X] GOB
+- [ ] MB
 
+## H.264
+### parser list
+
+```
 - [X] NALU
 - [X] AU
 - [X] SPS
@@ -38,3 +45,4 @@ only support python3
     - [X] macro block
     - [ ] mb_pred Intra case
     - [ ] residual_block_cavlc
+ ```

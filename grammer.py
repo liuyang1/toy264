@@ -118,6 +118,10 @@ def inc(x):
     return x + 1
 
 
+def dec(x):
+    return x - 1
+
+
 class AU(GrammerUnit):
 
     def __init__(self, bs):

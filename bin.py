@@ -98,6 +98,7 @@ def sumsplit(widlst, s=8):
 
 def bytesfield(bs, widlst):
     r"""
+    deprecated
     >>> bytesfield(b'\x67\xff', [1, 2, 5, 1, 2, 5])
     [0, 3, 7, 1, 3, 31]
     """

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import sys
 sys.path.append("..")
 
@@ -67,3 +68,7 @@ class SEI(GrammerUnit):
         self.payload_type = self.readUntilFF()
         self.payload_size = self.readUntilFF()
 
+||||||| merged common ancestors
+=======
+import 
+>>>>>>> h265: update

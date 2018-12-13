@@ -18,19 +18,22 @@ class Picture(GrammerUnit):
                  ge('TR', 'u', 5),
                  ge('PTYPE', 'u', 6)]
         self._geparselst(self.bsm, gelst)
+
         def fn(self):
             self.prs(ge('PEI', 'u', 1))
             return self.PEI == 1
         self.prsseq(ges(ge('PSPARE', 'u', 8), until=fn, param=self))
         self.GOBs = [GOB(self.bsm)]
-      
+
     def dump(self):
         print('Picture')
         super().dump()
         for gob in self.GOBs:
             gob.dump()
 
+
 class GOB(GrammerUnit):
+
     def prs(self, ge):
         GrammerUnit._geparse(self, self.bsm, ge)
 
@@ -44,11 +47,31 @@ class GOB(GrammerUnit):
                  ge('GN', 'u', 4),
                  ge('GQUANT', 'u', 5)]
         self._geparselst(self.bsm, gelst)
+
         def fn(self):
             self.prs(ge('GEI', 'u', 1))
             return self.GEI == 1
         self.prsseq(ges(ge('GSPARE', 'u', 8), until=fn, param=self))
-      
+        self.MBs = [MB(self.bsm)]
+
     def dump(self):
         print('GOB')
+        super().dump()
+
+
+class MB(GrammerUnit):
+
+    def prs(self, ge):
+        GrammerUnit._geparse(self, self.bsm, ge)
+
+    def prsseq(self, ges):
+        GrammerUnit._geparseseq(self, self.bsm, ges)
+
+    def __init__(self, bsm):
+        self.bsm = bsm
+        gelst = [ge('mba', 'h261mba')]
+        self._geparselst(self.bsm, gelst)
+
+    def dump(self):
+        print('MB')
         super().dump()

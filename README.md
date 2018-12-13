@@ -17,12 +17,8 @@ only support python3
 - [ ] ce: CAVLC
 - [ ] me
 - [ ] te
-
-## H.261
-
-- [X] picture
-- [X] GOB
-- [ ] MB
+TODO:
+- [ ] copy cavlc table from ffmpeg, and add build table process
 
 ## H.264
 ### parser list
@@ -46,3 +42,9 @@ only support python3
     - [ ] mb_pred Intra case
     - [ ] residual_block_cavlc
  ```
+
+## H.261
+
+- [X] picture
+- [X] GOB
+- [ ] MB

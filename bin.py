@@ -1,5 +1,6 @@
 import sys
 import math
+from pprint import pprint
 
 import tab
 
@@ -99,6 +100,7 @@ def sumsplit(widlst, s=8):
 def bytesfield(bs, widlst):
     r"""
     deprecated
+    XXX: This is bad to limit to 8
     >>> bytesfield(b'\x67\xff', [1, 2, 5, 1, 2, 5])
     [0, 3, 7, 1, 3, 31]
     """
@@ -179,25 +181,76 @@ def deSignedExpl(bs, offset=0):
     return ret, offset
 
 
+def buildOcts(x):
+    r"""
+    >>> buildOcts(0x80)
+    [1, 0, 0, 0, 0, 0, 0, 0]
+    >>> buildOcts(0x3A)
+    [0, 0, 1, 1, 1, 0, 1, 0]
+    """
+    # assert x < 256
+    return [(x & 1 << i) >> i for i in range(7, -1, -1)]
+
+
+def buildBits(x, ln):
+    r"""
+    >>> buildBits(0x05C0, 10)
+    [0, 0, 0, 0, 0, 1, 0, 1, 1, 1]
+    >>> buildBits(0x0001, 16)
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+    >>> buildBits(0x0E, 7)
+    [0, 0, 0, 0, 1, 1, 1]
+    """
+    lst = []
+    if ln % 8 == 0:
+        head = ln - 8
+        tail = 8
+    else:
+        head = (ln // 8) * 8
+        tail = ln - head
+    if ln > 8:
+        lst = buildBits(x // 256, head)
+    l = buildOcts(x)
+    l = l[:tail]
+    lst.extend(l)
+    return lst
+
+
+def addTrie(dct, lst, x):
+    for i in lst[:-1]:
+        if i not in dct.keys():
+            dct[i] = {}
+        dct = dct[i]
+    try:
+        dct[lst[-1]] = x
+    except:
+        print("make sure table is prefix tree")
+        raise
+
+
 def buildTrie(tbl):
-    pass
+    dct = {}
+    for k in tbl:
+        ln, x = k
+        lst = buildBits(x, ln)
+        addTrie(dct, lst, tbl[k])
+    return dct
 
 
 def deVlcTbl(tbl):
     r"""
     >>> fn = deVlcTbl(tab.H261MbaVlcTbl)
-    >>> fn(b'\x10')
-    1
-    >>> fn(b'\x09')
-    12
+    # >>> fn(b'\x10')
+    # 1
+    # >>> fn(b'\x09')
+    # 12
     """
     trie = buildTrie(tbl)
+    print(trie)
     def func(bs, offset=0):
         return 0
     return func
 
-
-deH261Mba = deVlcTbl(tab.H261MbaVlcTbl)
 
 def deAdaptiveExpl(bs, offset=0):
     r"""
@@ -218,6 +271,7 @@ class BitStreamM():
     def __init__(self, bs, csr=0):
         self.bs = bs
         self.csr = csr
+        self.deH261Mba = deVlcTbl(tab.H261MbaVlcTbl)
 
     def readBit(self, size):
         v, self.csr = readBitsIncOff(self.bs, self.csr, size)
@@ -248,6 +302,10 @@ class BitStreamM():
         v, self.crs = deCAVLC(self.bs, nC, self.csr)
         return v
 
+    def h261mba(self):
+        v, self.crs = self.deH261Mba(self.bs)
+
+
     def isMoreData(self):
         return self.csr < len(self.bs) * BitStreamM.base
 
@@ -255,7 +313,8 @@ class BitStreamM():
         despmap = {'u': BitStreamM.readBit,
                    'ue': BitStreamM.ue, 'se': BitStreamM.se,
                    'b': BitStreamM.b,
-                   'ae': None, 'ce': None, 'me': None, 'te': None}
+                   'ae': None, 'ce': None, 'me': None, 'te': None,
+                   'h261mba': BitStreamM.h261mba}
         fn = despmap[s]
         if fn is None:
             raise Exception("%s @ BitStreamM not impl" % (s))

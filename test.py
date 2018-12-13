@@ -3,13 +3,14 @@ import grammer
 import semantic
 
 if __name__ == "__main__":
-    fn = "test.264"
+    # fn = "video_es_all.dat"
+    fn = "1.bin"
     d = open(fn, 'rb').read()
     d = bin.nalu(d)
     SPSl, PPSl = [], []
     for nal in d:
         nal = grammer.nalunit(nal)
-        print(nal.nal_ref_idc, end=" ")
+        print("NAL ", nal.nal_ref_idc, end=" ")
         print(semantic.nal_unit_type(nal.nal_unit_type))
         if semantic.isSPS(nal):
             SPS = grammer.SPS(nal.rbsp)
@@ -26,6 +27,7 @@ if __name__ == "__main__":
             sei = grammer.SEI(nal.rbsp)
             sei.dump()
         elif semantic.isSlice(nal):
+            continue
             bin.dump(nal.rbsp)
             SliceHead = grammer.SliceHead(nal, PPSl)
             SliceHead.dump()
